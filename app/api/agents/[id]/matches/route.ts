@@ -1,16 +1,63 @@
+import { jsonError, jsonOk } from "@/lib/api/response";
+import {
+  getAgentWithAttendee,
+  getConversationsByMatchIds,
+  listMatchesForAgent,
+} from "@/lib/db/queries";
 import { getSeedMatches } from "@/lib/seed/mock-matches";
-import type { MatchesResponse } from "@/types/matches";
+import { SEED_AGENT_ID } from "@/lib/seed/constants";
+import type { MatchProposal, MatchesResponse } from "@/types/matches";
 
-/**
- * GET /api/agents/:id/matches
- * Returns match proposals for the dashboard cards.
- * TODO(BE): read from Supabase `matches` + join attendees + conversations.
- */
+export const runtime = "nodejs";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ id: string }> },
+  context: RouteContext,
 ): Promise<Response> {
   const { id } = await context.params;
-  const body: MatchesResponse = { matches: getSeedMatches(id) };
-  return Response.json(body);
+
+  const agent = await getAgentWithAttendee(id);
+  if (!agent) {
+    if (id === SEED_AGENT_ID) {
+      return jsonOk<MatchesResponse>({ matches: getSeedMatches(id) });
+    }
+    return jsonError("Agent not found", 404);
+  }
+
+  const matches = await listMatchesForAgent(id);
+  if (matches.length === 0 && id === SEED_AGENT_ID) {
+    return jsonOk<MatchesResponse>({ matches: getSeedMatches(id) });
+  }
+
+  const conversations = await getConversationsByMatchIds(
+    matches.map((m) => m.id),
+  );
+  const conversationByMatchId = new Map(
+    conversations.map((c) => [c.match_id, c]),
+  );
+
+  const body: MatchesResponse = {
+    matches: matches.slice(0, 10).map((m): MatchProposal => {
+      const conv = conversationByMatchId.get(m.id);
+      return {
+        id: m.id,
+        score: m.score,
+        reason: m.reason ?? "",
+        why_this_match_matters: conv?.summary ?? m.reason ?? "",
+        proposed_time: m.proposed_time,
+        status: m.status,
+        target: {
+          id: m.target.id,
+          name: m.target.name,
+          role: m.target.role,
+          company: m.target.company ?? "",
+        },
+        conversation: conv?.messages_json,
+      };
+    }),
+  };
+
+  return jsonOk(body);
 }

@@ -1,0 +1,206 @@
+/**
+ * Backend smoke test — Supabase + read-only agent APIs.
+ *
+ * Prerequisites:
+ *   - .env with Supabase keys
+ *   - schema applied (supabase/schema.sql)
+ *   - seed data (pnpm db:seed)
+ *
+ * Run: pnpm check:backend
+ */
+
+import { GET as getGraph } from "@/app/api/agents/[id]/graph/route";
+import { GET as getMatches } from "@/app/api/agents/[id]/matches/route";
+import { GET as getStatus } from "@/app/api/agents/[id]/status/route";
+import { getServerClient } from "@/lib/db/clients";
+import { SEED_AGENT_ID } from "@/lib/seed/constants";
+import type {
+  AgentStatusResponse,
+  GraphResponse,
+  MatchCardResponse,
+} from "@/lib/db/types";
+
+let failed = 0;
+
+function fail(msg: string): void {
+  console.error(`✗ ${msg}`);
+  failed += 1;
+}
+
+function pass(msg: string): void {
+  console.log(`✓ ${msg}`);
+}
+
+function routeContext(id: string) {
+  return { params: Promise.resolve({ id }) };
+}
+
+async function checkEnv(): Promise<void> {
+  const required = [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_SECRET_KEY",
+  ] as const;
+
+  for (const key of required) {
+    if (!process.env[key]) {
+      fail(`${key} is not set in .env`);
+    }
+  }
+  if (failed === 0) pass("required env vars present");
+}
+
+async function checkSupabase(): Promise<void> {
+  const sb = getServerClient();
+
+  const { count: attendeeCount, error: tableError } = await sb
+    .from("attendees")
+    .select("*", { count: "exact", head: true });
+
+  if (tableError) {
+    fail(
+      `Supabase attendees table: ${tableError.message} (apply supabase/schema.sql?)`,
+    );
+    return;
+  }
+
+  pass(`Supabase connected (${attendeeCount ?? 0} attendees)`);
+
+  if (!attendeeCount) {
+    fail("no attendees in DB — run: pnpm db:seed");
+    return;
+  }
+
+  const { count, error: agentError } = await sb
+    .from("agents")
+    .select("id", { count: "exact", head: true })
+    .eq("id", SEED_AGENT_ID);
+
+  if (agentError) {
+    fail(`agents query: ${agentError.message}`);
+    return;
+  }
+
+  if (!count) {
+    fail(
+      `demo agent ${SEED_AGENT_ID} not found — run: pnpm db:seed`,
+    );
+    return;
+  }
+
+  pass(`demo agent exists (${SEED_AGENT_ID})`);
+}
+
+function isAgentStatusResponse(v: unknown): v is AgentStatusResponse {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.agentId === "string" &&
+    typeof o.status === "string" &&
+    typeof o.attendeeName === "string" &&
+    typeof o.matchCount === "number"
+  );
+}
+
+function isGraphResponse(v: unknown): v is GraphResponse {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    Array.isArray(o.nodes) &&
+    Array.isArray(o.edges) &&
+    Array.isArray(o.activity) &&
+    o.nodes.length >= 1
+  );
+}
+
+function isMatchCardArray(v: unknown): v is MatchCardResponse[] {
+  return (
+    Array.isArray(v) &&
+    v.every(
+      (m) =>
+        m &&
+        typeof m === "object" &&
+        typeof (m as MatchCardResponse).id === "string" &&
+        typeof (m as MatchCardResponse).score === "number" &&
+        (m as MatchCardResponse).target?.name,
+    )
+  );
+}
+
+async function checkApiRoute(
+  name: string,
+  handler: typeof getStatus,
+  validate: (body: unknown) => boolean,
+  minExtra?: (body: unknown) => boolean,
+): Promise<void> {
+  const res = await handler(
+    new Request(`http://localhost/api/agents/${SEED_AGENT_ID}/${name}`),
+    routeContext(SEED_AGENT_ID),
+  );
+
+  if (res.status !== 200) {
+    const err = await res.json().catch(() => ({}));
+    fail(`GET /api/agents/:id/${name} → ${res.status} ${JSON.stringify(err)}`);
+    return;
+  }
+
+  const body = await res.json();
+  if (!validate(body)) {
+    fail(`GET /api/agents/:id/${name} → invalid response shape`);
+    return;
+  }
+
+  if (minExtra && !minExtra(body)) {
+    fail(`GET /api/agents/:id/${name} → seed data looks empty`);
+    return;
+  }
+
+  pass(`GET /api/agents/:id/${name} → 200`);
+}
+
+async function main(): Promise<void> {
+  console.log("→ RelAI backend smoke test\n");
+
+  await checkEnv();
+  if (failed > 0) {
+    process.exit(1);
+  }
+
+  await checkSupabase();
+  if (failed > 0) {
+    process.exit(1);
+  }
+
+  await checkApiRoute("status", getStatus, isAgentStatusResponse, (b) => {
+    const s = b as AgentStatusResponse;
+    return s.attendeeName.length > 0 && s.eventCount > 0;
+  });
+
+  await checkApiRoute("graph", getGraph, isGraphResponse, (b) => {
+    const g = b as GraphResponse;
+    return (
+      g.nodes.some((n) => n.role === "center") &&
+      g.nodes.some((n) => n.role === "candidate") &&
+      g.activity.length > 0
+    );
+  });
+
+  await checkApiRoute("matches", getMatches, isMatchCardArray, (b) => {
+    return (b as MatchCardResponse[]).length >= 3;
+  });
+
+  console.log("");
+  if (failed > 0) {
+    console.error(`Failed ${failed} check(s).`);
+    process.exit(1);
+  }
+
+  console.log("✓ All backend checks passed.");
+  console.log(
+    `  Dashboard: ${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard/${SEED_AGENT_ID}`,
+  );
+}
+
+main().catch((err) => {
+  console.error("✗", err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});

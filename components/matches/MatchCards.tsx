@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { MatchCard } from "@/components/matches/MatchCard";
+import { SEED_AGENT_ID } from "@/lib/seed/constants";
 import type { MatchProposal, MatchesResponse } from "@/types/matches";
 
 const POLL_MS = 2000;
@@ -108,18 +109,19 @@ export function MatchCards({ agentId }: MatchCardsProps) {
         {!loading && !error && matches.length === 0 && (
           <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
             No matches yet. Your agent is still networking…
-            {agentId !== "seed-agent" && (
+            {agentId !== SEED_AGENT_ID && (
               <>
                 <br />
                 <span className="mt-2 inline-block text-xs">
                   Try{" "}
                   <a
-                    href="/dashboard/seed-agent"
+                    href={`/dashboard/${SEED_AGENT_ID}`}
                     className="text-indigo-400 hover:underline"
                   >
-                    /dashboard/seed-agent
+                    demo dashboard
                   </a>{" "}
-                  for demo data.
+                  after running{" "}
+                  <code className="text-zinc-400">pnpm db:seed</code>.
                 </span>
               </>
             )}

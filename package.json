@@ -11,7 +11,10 @@
     "db:seed": "tsx --env-file=.env scripts/seed-attendees.ts",
     "bot:dev": "tsx --env-file=.env scripts/bot-dev.ts",
     "check:supabase": "tsx --env-file=.env scripts/check-supabase.ts",
-    "check:gemini": "tsx --env-file=.env scripts/check-gemini.ts"
+    "check:gemini": "tsx --env-file=.env scripts/check-gemini.ts",
+    "check:backend": "tsx --env-file=.env scripts/check-backend.ts",
+    "test:unit": "tsx lib/db/graph.test.ts",
+    "test": "tsx scripts/test-all.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

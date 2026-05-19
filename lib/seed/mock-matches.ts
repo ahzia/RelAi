@@ -1,7 +1,7 @@
 import type { MatchProposal } from "@/types/matches";
+import { SEED_AGENT_ID } from "@/lib/seed/constants";
 
-/** Demo agent id — see TODO.md Phase 1 acceptance */
-export const SEED_AGENT_ID = "seed-agent";
+export { SEED_AGENT_ID };
 
 /**
  * Seeded match cards until BE reads from Supabase.
