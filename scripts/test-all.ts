@@ -13,6 +13,10 @@ const steps = [
     label: "backend smoke test",
     cmd: ["pnpm", "exec", "tsx", "--env-file=.env", "scripts/check-backend.ts"],
   },
+  {
+    label: "onboarding smoke test",
+    cmd: ["pnpm", "exec", "tsx", "--env-file=.env", "scripts/check-onboarding.ts"],
+  },
 ];
 
 for (const step of steps) {

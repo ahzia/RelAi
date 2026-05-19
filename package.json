@@ -13,6 +13,8 @@
     "check:supabase": "tsx --env-file=.env scripts/check-supabase.ts",
     "check:gemini": "tsx --env-file=.env scripts/check-gemini.ts",
     "check:backend": "tsx --env-file=.env scripts/check-backend.ts",
+    "check:onboarding": "tsx --env-file=.env scripts/check-onboarding.ts",
+    "demo:start": "tsx --env-file=.env scripts/demo-start.ts",
     "test:unit": "tsx lib/db/graph.test.ts",
     "test": "tsx scripts/test-all.ts"
   },

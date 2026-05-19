@@ -1,5 +1,6 @@
 import { getServerClient } from "@/lib/db/clients";
 import type {
+  AgentStatus,
   AgentWithAttendee,
   Attendee,
   AttendeeInsert,
@@ -44,6 +45,124 @@ export async function listAttendees(limit = 200): Promise<Attendee[]> {
 
   if (error) throwDb("listAttendees", error);
   return (data ?? []) as Attendee[];
+}
+
+export async function getAttendeeByTelegramChatId(
+  telegramChatId: number,
+): Promise<Attendee | null> {
+  const sb = getServerClient();
+  const { data, error } = await sb
+    .from("attendees")
+    .select("*")
+    .eq("telegram_chat_id", telegramChatId)
+    .maybeSingle();
+
+  if (error) throwDb("getAttendeeByTelegramChatId", error);
+  return (data as Attendee | null) ?? null;
+}
+
+export async function getAgentByAttendeeId(
+  attendeeId: string,
+): Promise<{ id: string } | null> {
+  const sb = getServerClient();
+  const { data, error } = await sb
+    .from("agents")
+    .select("id")
+    .eq("attendee_id", attendeeId)
+    .maybeSingle();
+
+  if (error) throwDb("getAgentByAttendeeId", error);
+  return data ?? null;
+}
+
+export async function upsertAttendeeFromProfile(
+  telegramChatId: number,
+  profile: {
+    name: string;
+    role: string;
+    company?: string;
+    interests: string[];
+    networking_goal: string;
+    availability: unknown;
+  },
+): Promise<Attendee> {
+  const sb = getServerClient();
+  const existing = await getAttendeeByTelegramChatId(telegramChatId);
+
+  const row = {
+    name: profile.name,
+    role: profile.role,
+    company: profile.company || null,
+    bio: profile.networking_goal,
+    interests: profile.interests,
+    goals: profile.networking_goal,
+    availability: profile.availability,
+    telegram_chat_id: telegramChatId,
+  };
+
+  if (existing) {
+    const { data, error } = await sb
+      .from("attendees")
+      .update(row)
+      .eq("id", existing.id)
+      .select("*")
+      .single();
+
+    if (error) throwDb("upsertAttendeeFromProfile(update)", error);
+    return data as Attendee;
+  }
+
+  const { data, error } = await sb.from("attendees").insert(row).select("*").single();
+
+  if (error) throwDb("upsertAttendeeFromProfile(insert)", error);
+  return data as Attendee;
+}
+
+export async function createAgentForAttendee(
+  attendeeId: string,
+  profile: {
+    name: string;
+    role: string;
+    company?: string;
+    interests: string[];
+    networking_goal: string;
+    ideal_matches?: string[];
+    availability: unknown;
+  },
+): Promise<string> {
+  const existing = await getAgentByAttendeeId(attendeeId);
+  if (existing) return existing.id;
+
+  const sb = getServerClient();
+  const { data, error } = await sb
+    .from("agents")
+    .insert({
+      attendee_id: attendeeId,
+      persona: profile,
+      networking_goal: profile.networking_goal,
+      constraints: {
+        availability: profile.availability,
+        ideal_matches: profile.ideal_matches ?? [],
+      },
+      status: "idle",
+    })
+    .select("id")
+    .single();
+
+  if (error) throwDb("createAgentForAttendee", error);
+  return data.id;
+}
+
+export async function deleteAttendeeByTelegramChatId(
+  telegramChatId: number,
+): Promise<void> {
+  const sb = getServerClient();
+  const { error } = await sb
+    .from("attendees")
+    .delete()
+    .eq("telegram_chat_id", telegramChatId);
+
+  if (error) throwDb("deleteAttendeeByTelegramChatId", error);
 }
 
 export async function getAttendeesByIds(ids: string[]): Promise<Attendee[]> {
@@ -135,6 +254,48 @@ export async function updateMatchStatus(
   if (!target) return null;
 
   return { ...row, target };
+}
+
+export async function updateAgentStatus(
+  agentId: string,
+  status: AgentStatus,
+): Promise<void> {
+  const sb = getServerClient();
+  const { error } = await sb
+    .from("agents")
+    .update({ status })
+    .eq("id", agentId);
+
+  if (error) throwDb("updateAgentStatus", error);
+}
+
+export async function getAgentStatus(agentId: string): Promise<AgentStatus | null> {
+  const sb = getServerClient();
+  const { data, error } = await sb
+    .from("agents")
+    .select("status")
+    .eq("id", agentId)
+    .maybeSingle();
+
+  if (error) throwDb("getAgentStatus", error);
+  return (data?.status as AgentStatus | undefined) ?? null;
+}
+
+export async function deleteGraphEventsForAgent(agentId: string): Promise<void> {
+  const sb = getServerClient();
+  const { error } = await sb
+    .from("graph_events")
+    .delete()
+    .eq("requester_id", agentId);
+
+  if (error) throwDb("deleteGraphEventsForAgent", error);
+}
+
+export async function deleteMatchesForAgent(agentId: string): Promise<void> {
+  const sb = getServerClient();
+  const { error } = await sb.from("matches").delete().eq("requester_id", agentId);
+
+  if (error) throwDb("deleteMatchesForAgent", error);
 }
 
 export async function countMatchesForAgent(agentId: string): Promise<{

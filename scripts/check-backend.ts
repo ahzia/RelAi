@@ -11,7 +11,9 @@
 
 import { GET as getGraph } from "@/app/api/agents/[id]/graph/route";
 import { GET as getMatches } from "@/app/api/agents/[id]/matches/route";
+import { POST as postStart } from "@/app/api/agents/[id]/start/route";
 import { GET as getStatus } from "@/app/api/agents/[id]/status/route";
+import { getAgentStatus } from "@/lib/db/queries";
 import { getServerClient } from "@/lib/db/clients";
 import { SEED_AGENT_ID } from "@/lib/seed/constants";
 import type { AgentStatusResponse, GraphResponse } from "@/lib/db/types";
@@ -186,6 +188,28 @@ async function main(): Promise<void> {
   await checkApiRoute("matches", getMatches, isMatchesResponse, (b) => {
     return (b as MatchesResponse).matches.length >= 3;
   });
+
+  console.log("\n→ POST /api/agents/:id/start (demo workflow)…");
+  const startRes = await postStart(
+    new Request(`http://localhost/api/agents/${SEED_AGENT_ID}/start`, {
+      method: "POST",
+    }),
+    routeContext(SEED_AGENT_ID),
+  );
+  if (startRes.status !== 202) {
+    fail(`POST /api/agents/:id/start → ${startRes.status}`);
+  } else {
+    pass("POST /api/agents/:id/start → 202");
+    await new Promise((r) => setTimeout(r, 1200));
+    const status = await getAgentStatus(SEED_AGENT_ID);
+    if (status === "scanning" || status === "contacting" || status === "negotiating") {
+      pass(`agent status is running (${status})`);
+    } else if (status === "done") {
+      pass("agent status already done (fast demo or prior run)");
+    } else {
+      fail(`expected running status after start, got ${status ?? "null"}`);
+    }
+  }
 
   console.log("");
   if (failed > 0) {

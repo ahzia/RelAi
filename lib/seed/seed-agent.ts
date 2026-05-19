@@ -128,10 +128,10 @@ function labelFor(targetId: string): string {
   return labels[targetId] ?? "attendee";
 }
 
-export function buildDemoMatches() {
+export function buildDemoMatches(agentId: string = SEED_AGENT_ID) {
   return [
     {
-      requester_id: SEED_AGENT_ID,
+      requester_id: agentId,
       target_id: SEED_MATCH_TARGET_IDS[0],
       score: 92,
       reason:
@@ -156,7 +156,7 @@ export function buildDemoMatches() {
       },
     },
     {
-      requester_id: SEED_AGENT_ID,
+      requester_id: agentId,
       target_id: SEED_MATCH_TARGET_IDS[1],
       score: 88,
       reason:
@@ -181,7 +181,7 @@ export function buildDemoMatches() {
       },
     },
     {
-      requester_id: SEED_AGENT_ID,
+      requester_id: agentId,
       target_id: SEED_MATCH_TARGET_IDS[2],
       score: 85,
       reason:
