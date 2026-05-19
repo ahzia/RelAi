@@ -81,6 +81,20 @@ export async function startAgentNetworking(
       topN,
       onEvent: async (event) => {
         await insertGraphEvent(agentId, event);
+        if (notifyChatId && event.type === "scanning" && event.status === "start") {
+          await sendPlainMessage(
+            getBot(),
+            notifyChatId,
+            "🔍 Scanning who's at the event…",
+          );
+        }
+        if (notifyChatId && event.type === "scanning" && event.status === "end") {
+          await sendPlainMessage(
+            getBot(),
+            notifyChatId,
+            "🤝 Talking to the best candidate agents… (about 30–60 seconds)",
+          );
+        }
         if (event.type === "scanning" && event.status === "start") {
           await updateAgentStatus(agentId, "scanning");
         }

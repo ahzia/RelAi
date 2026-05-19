@@ -18,6 +18,14 @@ async function main() {
   const me = await bot.api.getMe();
   console.log(`Bot running as @${me.username} (polling). Press Ctrl+C to stop.`);
 
+  await bot.api.setMyCommands([
+    { command: "start", description: "Welcome & menu" },
+    { command: "onboard", description: "Set up your profile" },
+    { command: "networking", description: "Find matches" },
+    { command: "demo", description: "Try a demo run" },
+    { command: "help", description: "How it works" },
+  ]);
+
   await bot.start({
     onStart: () => {
       console.log("Listening for messages… Open https://t.me/" + me.username);

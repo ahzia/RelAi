@@ -1,97 +1,31 @@
 import type { Bot } from "grammy";
-import {
-  getAttendeeByTelegramChatId,
-  getOnboardingState,
-} from "@/lib/db/attendees";
-import { getAgentByAttendeeId } from "@/lib/db/agents";
 import { updateMatchStatus } from "@/lib/db/matches";
+import { parseIntent } from "./intents";
 import {
-  startAgentNetworking,
-  startDemoNetworking,
-} from "@/lib/services/agent-start-service";
-import {
-  beginOnboarding,
-  handleOnboardingText,
-} from "@/lib/services/onboarding-service";
-import { sendDashboardLink, sendPlainMessage } from "./notify";
+  handleFreeText,
+  runDashboard,
+  runDemo,
+  runNetworking,
+  runOnboard,
+  sendHelp,
+  sendWelcome,
+} from "./actions";
+import { mainMenuKeyboard } from "./keyboards";
 
 export function registerBotHandlers(bot: Bot): void {
-  bot.command("start", async (ctx) => {
-    const name = ctx.from?.first_name ?? "there";
-    await ctx.reply(
-      `Hi ${name}, I'm your RelAI networking agent. I'll help you find the most valuable people to meet at this event.\n\n` +
-        `• /onboard — set up your profile\n` +
-        `• /networking — run matching (after onboard)\n` +
-        `• /demo — preview Mission Control with demo data\n` +
-        `• /help — command list`,
-    );
-  });
-
-  bot.command("help", async (ctx) => {
-    await ctx.reply(
-      "*Commands*\n" +
-        "/onboard — create your agent (5 questions)\n" +
-        "/networking — start agent matching\n" +
-        "/demo — demo dashboard + sample run\n" +
-        "/start — welcome message",
-      { parse_mode: "Markdown" },
-    );
-  });
-
+  bot.command("start", (ctx) => sendWelcome(ctx));
+  bot.command("help", (ctx) => sendHelp(ctx));
   bot.command("onboard", async (ctx) => {
     const chatId = ctx.chat?.id;
-    if (!chatId) return;
-    const result = await beginOnboarding(chatId);
-    for (const msg of result.messages) {
-      await ctx.reply(msg, { parse_mode: "Markdown" });
-    }
+    if (chatId) await runOnboard(ctx, chatId);
   });
-
   bot.command("networking", async (ctx) => {
     const chatId = ctx.chat?.id;
-    if (!chatId) return;
-
-    const attendee = await getAttendeeByTelegramChatId(chatId);
-    if (!attendee) {
-      await ctx.reply("Complete /onboard first.");
-      return;
-    }
-
-    const agent = await getAgentByAttendeeId(attendee.id);
-    if (!agent) {
-      await ctx.reply("Complete /onboard first — your agent is not created yet.");
-      return;
-    }
-
-    await ctx.reply(
-      "Starting your networking run. This may take up to a minute…",
-    );
-
-    void startAgentNetworking({
-      agentId: agent.id,
-      notifyChatId: chatId,
-    }).catch((err) => {
-      console.error("[networking]", err);
-      void ctx.reply(
-        "Something went wrong during networking. Try again in a moment or use USE_DEMO_FALLBACK=true.",
-      );
-    });
+    if (chatId) await runNetworking(ctx, chatId);
   });
-
   bot.command("demo", async (ctx) => {
     const chatId = ctx.chat?.id;
-    if (!chatId) return;
-
-    await ctx.reply(
-      "Demo mode: starting the seed agent workflow. You'll get a Mission Control link and sample matches.",
-    );
-
-    void startDemoNetworking(chatId).catch((err) => {
-      console.error("[demo]", err);
-      void ctx.reply(
-        "Demo failed. Check Supabase + Gemini env vars and run `npm run db:seed`.",
-      );
-    });
+    if (chatId) await runDemo(ctx, chatId);
   });
 
   bot.callbackQuery(/^approve:(.+)$/, async (ctx) => {
@@ -103,7 +37,7 @@ export function registerBotHandlers(bot: Bot): void {
     await ctx.answerCallbackQuery({ text: "Approved" });
 
     if (!result) {
-      await ctx.reply("Match not found.");
+      await ctx.reply("Match not found.", { reply_markup: mainMenuKeyboard() });
       return;
     }
 
@@ -117,7 +51,7 @@ export function registerBotHandlers(bot: Bot): void {
 
     await ctx.reply(
       `Meeting confirmed with *${result.targetName}* at ${when}.`,
-      { parse_mode: "Markdown" },
+      { parse_mode: "Markdown", reply_markup: mainMenuKeyboard() },
     );
   });
 
@@ -129,7 +63,9 @@ export function registerBotHandlers(bot: Bot): void {
     await ctx.answerCallbackQuery({ text: "Rejected" });
 
     if (result) {
-      await ctx.reply(`Passed on meeting with ${result.targetName}.`);
+      await ctx.reply(`Passed on meeting with ${result.targetName}.`, {
+        reply_markup: mainMenuKeyboard(),
+      });
     }
   });
 
@@ -137,37 +73,42 @@ export function registerBotHandlers(bot: Bot): void {
     const chatId = ctx.chat?.id;
     const text = ctx.message.text;
     if (!chatId || !text) return;
+
+    // Slash commands are handled by bot.command above
     if (text.startsWith("/")) return;
 
-    const onboarding = await getOnboardingState(chatId);
-    if (
-      onboarding &&
-      onboarding.state.step !== "idle" &&
-      onboarding.state.step !== "ready"
-    ) {
-      const result = await handleOnboardingText(chatId, text);
-      if (result) {
-        for (const msg of result.messages) {
-          await ctx.reply(msg, { parse_mode: "Markdown" });
-        }
-      }
-      return;
-    }
+    if (await handleFreeText(bot, ctx, chatId, text)) return;
 
-    const attendee = await getAttendeeByTelegramChatId(chatId);
-    const agent = attendee ? await getAgentByAttendeeId(attendee.id) : null;
-    if (agent) {
-      await sendDashboardLink(bot, chatId, agent.id);
-      await sendPlainMessage(
-        bot,
-        chatId,
-        "Use /networking to find new matches, or /help for commands.",
-      );
-      return;
-    }
+    const intent = parseIntent(text);
 
-    await ctx.reply(
-      "I didn't understand that. Try /onboard to get started, or /help.",
-    );
+    switch (intent) {
+      case "welcome":
+        await sendWelcome(ctx);
+        return;
+      case "help":
+        await sendHelp(ctx);
+        return;
+      case "onboard":
+        await ctx.replyWithChatAction("typing");
+        await runOnboard(ctx, chatId);
+        return;
+      case "networking":
+        await runNetworking(ctx, chatId);
+        return;
+      case "demo":
+        await runDemo(ctx, chatId);
+        return;
+      case "dashboard":
+        await runDashboard(bot, ctx, chatId);
+        return;
+      default:
+        await ctx.reply(
+          "I'm not sure what you mean. Try the buttons below, or type *help*.",
+          {
+            parse_mode: "Markdown",
+            reply_markup: mainMenuKeyboard(),
+          },
+        );
+    }
   });
 }

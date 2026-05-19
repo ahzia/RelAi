@@ -23,6 +23,8 @@ create table if not exists public.attendees (
   goals            text,
   availability     jsonb not null default '[]'::jsonb,
   telegram_chat_id bigint unique,
+  -- Telegram onboarding FSM (see lib/db/attendees.ts)
+  constraints        jsonb not null default '{}'::jsonb,
   created_at       timestamptz not null default now()
 );
 

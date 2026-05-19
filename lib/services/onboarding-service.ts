@@ -12,26 +12,42 @@ import {
 } from "@/lib/db/attendees";
 import { createAgentForAttendee, getAgentByAttendeeId } from "@/lib/db/agents";
 import {
-  ONBOARDING_QUESTIONS,
   formatConfirmSummary,
+  formatOnboardingPrompt,
 } from "@/lib/telegram/onboarding-copy";
 import {
   applyAnswer,
   answersComplete,
-  isConfirmYes,
   nextStep,
 } from "@/lib/telegram/onboarding-fsm";
+import {
+  isOnboardingCancel,
+  isOnboardingConfirm,
+  isOnboardingRestart,
+} from "@/lib/telegram/intents";
 import type { OnboardingState } from "@/lib/telegram/onboarding-types";
 import { startAgentNetworking } from "./agent-start-service";
 
 export type OnboardingReply = { messages: string[]; agentId?: string };
 
+export async function cancelOnboarding(chatId: number): Promise<OnboardingReply> {
+  const row = await getAttendeeByTelegramChatId(chatId);
+  if (row) {
+    await saveOnboardingState(row.id, { step: "idle", answers: {} });
+  }
+  return {
+    messages: [
+      "Setup cancelled. Tap *Set up my profile* whenever you're ready.",
+    ],
+  };
+}
+
 export async function beginOnboarding(chatId: number): Promise<OnboardingReply> {
   await upsertOnboardingStart(chatId);
   return {
     messages: [
-      "Let's set up your networking profile — one question at a time.\n\n" +
-        ONBOARDING_QUESTIONS.ask_name,
+      "Let's set up your networking profile — about 2 minutes, five questions.\n\n" +
+        formatOnboardingPrompt("ask_name"),
     ],
   };
 }
@@ -52,18 +68,25 @@ export async function handleOnboardingText(
     if (existing) {
       return {
         messages: [
-          "You already have an agent. Send /networking to run matching again, or /demo for the preview dashboard.",
+          "You already have an agent. Tap *Find matches* or type *find matches* to run again, or *Try demo* for a preview.",
         ],
         agentId: existing.id,
       };
     }
   }
 
+  if (isOnboardingCancel(text)) {
+    return cancelOnboarding(chatId);
+  }
+
   if (state.step === "confirm") {
-    if (!isConfirmYes(text)) {
+    if (isOnboardingRestart(text)) {
+      return beginOnboarding(chatId);
+    }
+    if (!isOnboardingConfirm(text)) {
       return {
         messages: [
-          "Please reply **yes** to confirm, or /onboard to start over.",
+          "Tap *Yes, create my agent* to confirm, or *Start over* to change your answers.",
         ],
       };
     }
@@ -83,11 +106,11 @@ export async function handleOnboardingText(
         step: "ask_name",
         answers: updatedAnswers,
       };
-      await saveOnboardingState(attendeeId, newState, row.constraints);
+      await saveOnboardingState(attendeeId, newState);
       return {
         messages: [
           "Some answers are missing. Let's restart.\n\n" +
-            ONBOARDING_QUESTIONS.ask_name,
+            formatOnboardingPrompt("ask_name"),
         ],
       };
     }
@@ -96,7 +119,7 @@ export async function handleOnboardingText(
       step: "confirm",
       answers: updatedAnswers,
     };
-    await saveOnboardingState(attendeeId, newState, row.constraints);
+    await saveOnboardingState(attendeeId, newState);
     return { messages: [formatConfirmSummary(updatedAnswers)] };
   }
 
@@ -104,11 +127,15 @@ export async function handleOnboardingText(
     step: following,
     answers: updatedAnswers,
   };
-  await saveOnboardingState(attendeeId, newState, row.constraints);
+  await saveOnboardingState(attendeeId, newState);
 
-  const question =
-    ONBOARDING_QUESTIONS[following as keyof typeof ONBOARDING_QUESTIONS];
-  return { messages: [question] };
+  return {
+    messages: [
+      formatOnboardingPrompt(
+        following as Parameters<typeof formatOnboardingPrompt>[0],
+      ),
+    ],
+  };
 }
 
 async function completeOnboarding(
@@ -138,7 +165,7 @@ async function completeOnboarding(
   const agentId = await createAgentForAttendee(attendeeId, profile);
 
   const readyState: OnboardingState = { step: "ready", answers: payload };
-  await saveOnboardingState(attendeeId, readyState, {});
+  await saveOnboardingState(attendeeId, readyState);
 
   void startAgentNetworking({
     agentId,

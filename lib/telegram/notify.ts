@@ -1,13 +1,17 @@
 import { InlineKeyboard, type Bot } from "grammy";
 import { getAppUrl } from "./env";
 import { canUseTelegramUrlButton } from "./urls";
+import { mainMenuKeyboard } from "./keyboards";
 
 export async function sendPlainMessage(
   bot: Bot,
   chatId: number,
   text: string,
 ): Promise<void> {
-  await bot.api.sendMessage(chatId, text, { parse_mode: "Markdown" });
+  await bot.api.sendMessage(chatId, text, {
+    parse_mode: "Markdown",
+    reply_markup: mainMenuKeyboard(),
+  });
 }
 
 export async function sendDashboardLink(
@@ -28,7 +32,7 @@ export async function sendDashboardLink(
     parse_mode: "Markdown",
     reply_markup: useButton
       ? new InlineKeyboard().url("Open Mission Control", dashboardUrl)
-      : undefined,
+      : mainMenuKeyboard(),
   });
 }
 
@@ -69,22 +73,25 @@ export async function sendMatchResults(
   chatId: number,
   matches: MatchForTelegram[],
 ): Promise<void> {
-  const header = `I found ${matches.length} strong match${matches.length === 1 ? "" : "es"} for you:\n`;
-  const body = matches.map((m, i) => formatMatchCard(m, i + 1)).join("\n\n");
+  await bot.api.sendMessage(
+    chatId,
+    `✅ Done! I found *${matches.length}* strong match${matches.length === 1 ? "" : "es"}. Tap Approve or Reject on each.`,
+    { parse_mode: "Markdown", reply_markup: mainMenuKeyboard() },
+  );
 
-  await bot.api.sendMessage(chatId, header + "\n" + body, {
-    parse_mode: "Markdown",
-  });
-
-  for (const m of matches) {
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i]!;
     const keyboard = new InlineKeyboard()
-      .text("Approve", `approve:${m.id}`)
-      .text("Reject", `reject:${m.id}`);
+      .text("✓ Approve", `approve:${m.id}`)
+      .text("✗ Reject", `reject:${m.id}`);
 
     await bot.api.sendMessage(
       chatId,
-      `Approve meeting with *${m.target.name}*?`,
-      { parse_mode: "Markdown", reply_markup: keyboard },
+      formatMatchCard(m, i + 1),
+      {
+        parse_mode: "Markdown",
+        reply_markup: keyboard,
+      },
     );
   }
 }
