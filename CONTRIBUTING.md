@@ -70,6 +70,7 @@ A task isn't done until:
 2. The matching checkbox in `TODO.md` is ticked.
 3. The acceptance criterion for the phase still passes (run the demo path locally).
 4. No new TypeScript errors (`pnpm typecheck`) and no new lint errors.
+5. If the change is significant (phase milestone, new API, schema change, env var, blocker resolved) — add an entry to [`updates/`](./updates/). Use `updates/_template.md`.
 
 ---
 
