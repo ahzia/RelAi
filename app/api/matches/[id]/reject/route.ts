@@ -1,11 +1,18 @@
-/**
- * POST /api/matches/:id/reject
- * TODO(BE): update Supabase + notify Telegram.
- */
+import { jsonError, jsonOk } from "@/lib/api/response";
+import { updateMatchStatus } from "@/lib/db/queries";
+
+export const runtime = "nodejs";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
 export async function POST(
   _request: Request,
-  context: { params: Promise<{ id: string }> },
+  context: RouteContext,
 ): Promise<Response> {
   const { id } = await context.params;
-  return Response.json({ ok: true, id, status: "rejected" as const });
+  const match = await updateMatchStatus(id, "rejected");
+  if (!match) {
+    return jsonError("Match not found", 404);
+  }
+  return jsonOk({ ok: true, id, status: "rejected" as const });
 }

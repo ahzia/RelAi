@@ -114,6 +114,29 @@ export async function getConversationsByMatchIds(
   return (data ?? []) as Conversation[];
 }
 
+export async function updateMatchStatus(
+  matchId: string,
+  status: "approved" | "rejected",
+): Promise<MatchWithTarget | null> {
+  const sb = getServerClient();
+  const { data, error } = await sb
+    .from("matches")
+    .update({ status })
+    .eq("id", matchId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throwDb("updateMatchStatus", error);
+  if (!data) return null;
+
+  const row = data as MatchWithTarget;
+  const targets = await getAttendeesByIds([row.target_id]);
+  const target = targets[0];
+  if (!target) return null;
+
+  return { ...row, target };
+}
+
 export async function countMatchesForAgent(agentId: string): Promise<{
   total: number;
   pending: number;

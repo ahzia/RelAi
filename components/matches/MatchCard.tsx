@@ -21,7 +21,7 @@ function formatProposedTime(iso: string | null): string | null {
 function statusStyles(status: MatchStatus): string {
   switch (status) {
     case "approved":
-      return "border-emerald-500/40 bg-emerald-500/10";
+      return "border-emerald-500/40 bg-emerald-500/10 ring-2 ring-emerald-500/50";
     case "rejected":
       return "border-red-500/30 bg-red-500/5 opacity-75";
     default:
