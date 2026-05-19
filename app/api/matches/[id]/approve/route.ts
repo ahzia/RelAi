@@ -1,5 +1,5 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
-import { updateMatchStatus } from "@/lib/db/queries";
+import { approveMatch } from "@/lib/services/match-action-service";
 
 export const runtime = "nodejs";
 
@@ -10,9 +10,9 @@ export async function POST(
   context: RouteContext,
 ): Promise<Response> {
   const { id } = await context.params;
-  const match = await updateMatchStatus(id, "approved");
-  if (!match) {
+  const result = await approveMatch(id);
+  if (!result) {
     return jsonError("Match not found", 404);
   }
-  return jsonOk({ ok: true, id, status: "approved" as const });
+  return jsonOk(result);
 }

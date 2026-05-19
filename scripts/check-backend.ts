@@ -13,7 +13,7 @@ import { GET as getGraph } from "@/app/api/agents/[id]/graph/route";
 import { GET as getMatches } from "@/app/api/agents/[id]/matches/route";
 import { POST as postStart } from "@/app/api/agents/[id]/start/route";
 import { GET as getStatus } from "@/app/api/agents/[id]/status/route";
-import { getAgentStatus } from "@/lib/db/queries";
+import { getAgentStatus } from "@/lib/db/agents";
 import { getServerClient } from "@/lib/db/clients";
 import { SEED_AGENT_ID } from "@/lib/seed/constants";
 import type { AgentStatusResponse, GraphResponse } from "@/lib/db/types";

@@ -1,5 +1,77 @@
 import { getServerClient } from "./clients";
 
+export async function deleteMatchesForAgent(agentId: string): Promise<void> {
+  const supabase = getServerClient();
+  const { error } = await supabase
+    .from("matches")
+    .delete()
+    .eq("requester_id", agentId);
+
+  if (error) throw new Error(`matches delete: ${error.message}`);
+}
+
+export type MatchDetails = {
+  id: string;
+  requesterId: string;
+  targetId: string;
+  proposedTime: string | null;
+  targetName: string;
+  requesterTelegramChatId: number | null;
+};
+
+export async function getMatchById(matchId: string): Promise<MatchDetails | null> {
+  const supabase = getServerClient();
+
+  const { data: match, error: fetchErr } = await supabase
+    .from("matches")
+    .select("id, requester_id, target_id, proposed_time")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (fetchErr) throw new Error(`matches select: ${fetchErr.message}`);
+  if (!match) return null;
+
+  const { data: target, error: targetErr } = await supabase
+    .from("attendees")
+    .select("name")
+    .eq("id", match.target_id as string)
+    .maybeSingle();
+
+  if (targetErr) throw new Error(`attendees select: ${targetErr.message}`);
+
+  const { data: agent, error: agentErr } = await supabase
+    .from("agents")
+    .select("attendee_id")
+    .eq("id", match.requester_id as string)
+    .maybeSingle();
+
+  if (agentErr) throw new Error(`agents select: ${agentErr.message}`);
+
+  let requesterTelegramChatId: number | null = null;
+  if (agent?.attendee_id) {
+    const { data: requester, error: reqErr } = await supabase
+      .from("attendees")
+      .select("telegram_chat_id")
+      .eq("id", agent.attendee_id as string)
+      .maybeSingle();
+
+    if (reqErr) throw new Error(`attendees select: ${reqErr.message}`);
+    requesterTelegramChatId =
+      typeof requester?.telegram_chat_id === "number"
+        ? requester.telegram_chat_id
+        : null;
+  }
+
+  return {
+    id: match.id as string,
+    requesterId: match.requester_id as string,
+    targetId: match.target_id as string,
+    proposedTime: match.proposed_time as string | null,
+    targetName: (target?.name as string) ?? "your match",
+    requesterTelegramChatId,
+  };
+}
+
 export async function insertMatchRecord(input: {
   requesterId: string;
   targetId: string;

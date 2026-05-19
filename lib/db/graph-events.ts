@@ -1,7 +1,17 @@
 import { getServerClient } from "./clients";
 import type { WorkflowEvent } from "@/lib/orchestrator/workflow";
 
-function eventMessage(event: WorkflowEvent): string {
+export async function deleteGraphEventsForAgent(agentId: string): Promise<void> {
+  const supabase = getServerClient();
+  const { error } = await supabase
+    .from("graph_events")
+    .delete()
+    .eq("requester_id", agentId);
+
+  if (error) throw new Error(`graph_events delete: ${error.message}`);
+}
+
+function defaultEventMessage(event: WorkflowEvent): string {
   switch (event.type) {
     case "scanning":
       return event.status === "start"
@@ -9,7 +19,7 @@ function eventMessage(event: WorkflowEvent): string {
         : "Scan complete.";
     case "contacting":
       return event.status === "start"
-        ? `Contacting attendee ${event.targetId.slice(0, 8)}…`
+        ? "Contacting attendee agent…"
         : "Contact round finished.";
     case "negotiating":
       return event.status === "start"
@@ -29,6 +39,7 @@ function eventMessage(event: WorkflowEvent): string {
 export async function insertGraphEvent(
   agentId: string,
   event: WorkflowEvent,
+  message?: string,
 ): Promise<void> {
   const supabase = getServerClient();
   const targetId =
@@ -45,7 +56,7 @@ export async function insertGraphEvent(
         : "status" in event
           ? event.status
           : "start",
-    message: eventMessage(event),
+    message: message ?? defaultEventMessage(event),
   });
 
   if (error) throw new Error(`graph_events insert: ${error.message}`);

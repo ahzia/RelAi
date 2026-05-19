@@ -1,7 +1,6 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
-import { getAgentWithAttendee } from "@/lib/db/queries";
-import type { AgentStatus } from "@/lib/db/types";
-import { runAgentNetworking } from "@/lib/orchestrator/run";
+import { getAgentById, type AgentStatus } from "@/lib/db/agents";
+import { startAgentNetworking } from "@/lib/services/agent-start-service";
 
 export const runtime = "nodejs";
 
@@ -15,7 +14,7 @@ export async function POST(
 ): Promise<Response> {
   const { id } = await context.params;
 
-  const agent = await getAgentWithAttendee(id);
+  const agent = await getAgentById(id);
   if (!agent) {
     return jsonError("Agent not found", 404);
   }
@@ -24,7 +23,7 @@ export async function POST(
     return jsonError("Workflow already running", 409);
   }
 
-  void runAgentNetworking(id).catch((err) => {
+  void startAgentNetworking({ agentId: id }).catch((err) => {
     console.error(`[orchestrator] agent ${id}:`, err);
   });
 

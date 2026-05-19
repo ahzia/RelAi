@@ -85,68 +85,26 @@ export async function updateAgentStatus(
   if (error) throw new Error(`agents update: ${error.message}`);
 }
 
-/** Fixed id for dashboard demo — created on first /demo if missing. */
-export const SEED_AGENT_ID = "00000000-0000-4000-8000-000000000001";
-export const SEED_ATTENDEE_ID = "00000000-0000-4000-8000-000000000002";
+export {
+  SEED_AGENT_ID,
+  SEED_ATTENDEE_ID,
+} from "@/lib/seed/constants";
 
+/** Ensures the canonical seed agent from `pnpm db:seed` exists (for /demo). */
 export async function ensureSeedAgent(): Promise<string> {
+  const { SEED_AGENT_ID } = await import("@/lib/seed/constants");
   const existing = await getAgentById(SEED_AGENT_ID);
-  if (existing) return SEED_AGENT_ID;
-
-  const supabase = getServerClient();
-
-  const { error: attErr } = await supabase.from("attendees").upsert(
-    {
-      id: SEED_ATTENDEE_ID,
-      name: "Demo User",
-      role: "Founder",
-      company: "RelAI",
-      interests: ["agentic ai", "enterprise networking"],
-      goals: "Meet AI founders and investors",
-      availability: [
-        {
-          start: "2026-05-19T14:00:00+02:00",
-          end: "2026-05-19T17:00:00+02:00",
-        },
-      ],
-      telegram_chat_id: null,
-    },
-    { onConflict: "id" },
-  );
-  if (attErr) throw new Error(`seed attendee: ${attErr.message}`);
-
-  const { error: agentErr } = await supabase.from("agents").upsert(
-    {
-      id: SEED_AGENT_ID,
-      attendee_id: SEED_ATTENDEE_ID,
-      persona: {
-        name: "Demo User",
-        role: "Founder",
-        company: "RelAI",
-        interests: ["agentic ai", "enterprise networking"],
-        networking_goal: "Meet AI founders and investors",
-        ideal_matches: ["ai investors", "infra founders"],
-        availability: [
-          {
-            start: "2026-05-19T14:00:00+02:00",
-            end: "2026-05-19T17:00:00+02:00",
-          },
-        ],
-      },
-      networking_goal: "Meet AI founders and investors",
-      constraints: {
-        availability: [
-          {
-            start: "2026-05-19T14:00:00+02:00",
-            end: "2026-05-19T17:00:00+02:00",
-          },
-        ],
-      },
-      status: "idle",
-    },
-    { onConflict: "id" },
-  );
-  if (agentErr) throw new Error(`seed agent: ${agentErr.message}`);
-
+  if (!existing) {
+    throw new Error(
+      `Seed agent not found. Run \`pnpm db:seed\` first (id: ${SEED_AGENT_ID}).`,
+    );
+  }
   return SEED_AGENT_ID;
+}
+
+export async function getAgentStatus(
+  agentId: string,
+): Promise<AgentStatus | null> {
+  const agent = await getAgentById(agentId);
+  return agent?.status ?? null;
 }

@@ -4,7 +4,10 @@ import {
   getOnboardingState,
 } from "@/lib/db/attendees";
 import { getAgentByAttendeeId } from "@/lib/db/agents";
-import { updateMatchStatus } from "@/lib/db/matches";
+import {
+  approveMatch,
+  rejectMatch,
+} from "@/lib/services/match-action-service";
 import {
   startAgentNetworking,
   startDemoNetworking,
@@ -96,40 +99,25 @@ export function registerBotHandlers(bot: Bot): void {
 
   bot.callbackQuery(/^approve:(.+)$/, async (ctx) => {
     const matchId = ctx.match[1];
-    const chatId = ctx.chat?.id;
-    if (!matchId || !chatId) return;
+    if (!matchId) return;
 
-    const result = await updateMatchStatus(matchId, "approved");
+    const result = await approveMatch(matchId);
     await ctx.answerCallbackQuery({ text: "Approved" });
 
     if (!result) {
       await ctx.reply("Match not found.");
-      return;
     }
-
-    const when = result.proposedTime
-      ? new Date(result.proposedTime).toLocaleString("en-GB", {
-          timeZone: "Europe/Rome",
-          dateStyle: "medium",
-          timeStyle: "short",
-        })
-      : "the proposed slot";
-
-    await ctx.reply(
-      `Meeting confirmed with *${result.targetName}* at ${when}.`,
-      { parse_mode: "Markdown" },
-    );
   });
 
   bot.callbackQuery(/^reject:(.+)$/, async (ctx) => {
     const matchId = ctx.match[1];
     if (!matchId) return;
 
-    const result = await updateMatchStatus(matchId, "rejected");
+    const result = await rejectMatch(matchId);
     await ctx.answerCallbackQuery({ text: "Rejected" });
 
-    if (result) {
-      await ctx.reply(`Passed on meeting with ${result.targetName}.`);
+    if (!result) {
+      await ctx.reply("Match not found.");
     }
   });
 
