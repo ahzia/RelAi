@@ -334,15 +334,27 @@ Per `hackathon_info.md` Vultr requirements:
 6. Supabase managed instance — only the service-role key sits on the VM.
 7. Record demo video; capture public URL for submission.
 
-**Secrets via `.env`:**
+**Secrets via `.env`** (see `.env.example` for the full list with comments):
 
 ```
+NEXT_PUBLIC_APP_URL=
 GEMINI_API_KEY=
 TELEGRAM_BOT_TOKEN=
-SUPABASE_URL=
-SUPABASE_SERVICE_KEY=
-NEXT_PUBLIC_APP_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_DATABASE_PASSWORD=
+SUPABASE_SECRET_KEY=
 ```
+
+**Supabase key model (new projects):**
+
+| Key | Where it's used | Bypass RLS? |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser + server reads | No — gated by RLS policies |
+| `SUPABASE_SECRET_KEY` | Server-side writes (orchestrator, API routes) | Yes |
+| `SUPABASE_DATABASE_PASSWORD` | `supabase db push`, `psql`, seed scripts | N/A (direct Postgres connection) |
+
+The publishable key replaces the legacy "anon key" and the secret key replaces the legacy "service_role key". Both legacy names still work for older projects.
 
 ---
 
