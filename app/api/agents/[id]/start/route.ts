@@ -1,7 +1,7 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { getAgentWithAttendee } from "@/lib/db/queries";
 import type { AgentStatus } from "@/lib/db/types";
-import { runDemoFallback } from "@/lib/seed/demo-fallback";
+import { runAgentNetworking } from "@/lib/orchestrator/run";
 
 export const runtime = "nodejs";
 
@@ -24,8 +24,8 @@ export async function POST(
     return jsonError("Workflow already running", 409);
   }
 
-  void runDemoFallback(id).catch((err) => {
-    console.error(`[demo-fallback] agent ${id}:`, err);
+  void runAgentNetworking(id).catch((err) => {
+    console.error(`[orchestrator] agent ${id}:`, err);
   });
 
   return jsonOk({ started: true, agentId: id }, 202);

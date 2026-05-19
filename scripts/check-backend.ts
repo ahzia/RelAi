@@ -190,6 +190,7 @@ async function main(): Promise<void> {
   });
 
   console.log("\n→ POST /api/agents/:id/start (demo workflow)…");
+  process.env.USE_DEMO_FALLBACK = "true";
   const startRes = await postStart(
     new Request(`http://localhost/api/agents/${SEED_AGENT_ID}/start`, {
       method: "POST",
