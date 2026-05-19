@@ -14,11 +14,8 @@ import { GET as getMatches } from "@/app/api/agents/[id]/matches/route";
 import { GET as getStatus } from "@/app/api/agents/[id]/status/route";
 import { getServerClient } from "@/lib/db/clients";
 import { SEED_AGENT_ID } from "@/lib/seed/constants";
-import type {
-  AgentStatusResponse,
-  GraphResponse,
-  MatchCardResponse,
-} from "@/lib/db/types";
+import type { AgentStatusResponse, GraphResponse } from "@/lib/db/types";
+import type { MatchesResponse } from "@/types/matches";
 
 let failed = 0;
 
@@ -112,16 +109,18 @@ function isGraphResponse(v: unknown): v is GraphResponse {
   );
 }
 
-function isMatchCardArray(v: unknown): v is MatchCardResponse[] {
+function isMatchesResponse(v: unknown): v is MatchesResponse {
+  if (!v || typeof v !== "object") return false;
+  const matches = (v as MatchesResponse).matches;
   return (
-    Array.isArray(v) &&
-    v.every(
+    Array.isArray(matches) &&
+    matches.every(
       (m) =>
         m &&
-        typeof m === "object" &&
-        typeof (m as MatchCardResponse).id === "string" &&
-        typeof (m as MatchCardResponse).score === "number" &&
-        (m as MatchCardResponse).target?.name,
+        typeof m.id === "string" &&
+        typeof m.score === "number" &&
+        typeof m.why_this_match_matters === "string" &&
+        m.target?.name,
     )
   );
 }
@@ -184,8 +183,8 @@ async function main(): Promise<void> {
     );
   });
 
-  await checkApiRoute("matches", getMatches, isMatchCardArray, (b) => {
-    return (b as MatchCardResponse[]).length >= 3;
+  await checkApiRoute("matches", getMatches, isMatchesResponse, (b) => {
+    return (b as MatchesResponse).matches.length >= 3;
   });
 
   console.log("");
