@@ -12,7 +12,12 @@
     "bot:dev": "NODE_OPTIONS=--use-openssl-ca tsx --env-file=.env scripts/bot-dev.ts",
     "webhook:set": "NODE_OPTIONS=--use-openssl-ca tsx --env-file=.env scripts/set-webhook.ts",
     "check:supabase": "tsx --env-file=.env scripts/check-supabase.ts",
-    "check:gemini": "tsx --env-file=.env scripts/check-gemini.ts"
+    "check:gemini": "tsx --env-file=.env scripts/check-gemini.ts",
+    "check:backend": "tsx --env-file=.env scripts/check-backend.ts",
+    "check:onboarding": "tsx --env-file=.env scripts/check-onboarding.ts",
+    "demo:start": "tsx --env-file=.env scripts/demo-start.ts",
+    "test:unit": "tsx lib/db/graph.test.ts",
+    "test": "tsx scripts/test-all.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

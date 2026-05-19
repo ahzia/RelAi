@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SEED_AGENT_ID } from "@/lib/seed/constants";
 
 const TELEGRAM_BOT_USERNAME =
   process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.replace(/^@/, "") ?? "";
@@ -70,7 +71,7 @@ export default function Home() {
               </span>
             )}
             <Link
-              href="/dashboard/seed-agent"
+              href={`/dashboard/${SEED_AGENT_ID}`}
               className="inline-flex h-12 items-center justify-center rounded-full border border-zinc-700 px-8 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
             >
               Preview Mission Control
