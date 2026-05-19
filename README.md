@@ -28,6 +28,7 @@ Built for the [**AI Agent Olympics Hackathon**](https://lablab.ai) at Milan AI W
 | [`TODO.md`](./TODO.md) | Phase-by-phase task board with role assignments |
 | [`hackathon_info.md`](./hackathon_info.md) | Deadlines, submission deliverables, judging criteria |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Branching, commits, PR workflow |
+| [`DEPLOY.md`](./DEPLOY.md) | Step-by-step Vultr + Coolify deployment |
 | [`updates/`](./updates/) | Dated handoff log — read newest first when picking up the project |
 
 ---

@@ -4,78 +4,85 @@ Companion to `ARCHITECTURE.md` and `Idea.md`. Submission deadline: **May 19, 4:0
 
 ---
 
-## Roles
+## ⚡ Current status — 2026-05-19 14:30 CEST
 
-Pick one owner per role. If you're 3 people, merge **BOT** into **BE**. If you're 5, split **OPS** off from **BOT**.
+**Done:** Phase 0 fully · most of Phases 1, 3, 4 · all of Phase 5 backend wiring.
+**Open:** FE dashboard · Vultr deploy · demo video · lablab submission · `package-lock.json` cleanup.
 
-| Code | Role | Primary responsibilities |
-|---|---|---|
-| **FE** | Frontend / UI | Landing page, dashboard, React Flow graph, match cards, activity feed |
-| **BE** | Backend / API | Next.js API routes, DB schema, Supabase wiring, orchestrator glue |
-| **AI** | AI / Agents | Gemini prompts, JSON schemas, conversation/match logic |
-| **BOT** | Telegram + Ops | Bot, onboarding state machine, Vultr deploy, demo video |
+### Must-do before submission (priority order)
 
-**Assign your team here:**
+| # | Task | Owner | Est. |
+|---|---|---|---|
+| 1 | Delete `package-lock.json` (use pnpm only) — blocks Coolify build detection | OPS / BOT | 2 min |
+| 2 | Provision Vultr VM + run Coolify (see `DEPLOY.md`) | OPS / BOT | 30 min |
+| 3 | Apply `supabase/schema.sql` to Supabase (Dashboard SQL Editor) | anyone | 2 min |
+| 4 | Run `pnpm db:seed` against Supabase | BE | 1 min |
+| 5 | Build dashboard at `/dashboard/[agentId]` — minimum: header + graph + match cards | FE | 60–90 min |
+| 6 | Record demo video (~3 min) | BOT | 15 min |
+| 7 | Submit on lablab.ai | ALL | 10 min |
 
-| Code | Person | Telegram/Discord |
-|---|---|---|
-| FE | _____ | |
-| BE | _____ | |
-| AI | _____ | |
-| BOT | _____ | |
+### What's NOT on the critical path (skip if time runs out)
+
+- FE polling/animation polish — landing → graph snap-in is acceptable
+- Approve/reject **from the dashboard** (Telegram inline buttons already work)
+- Stretch features in the bottom section
 
 ---
 
-## Phase 0 — Project setup *(everyone, first 30 min)*
+## Roles
 
-- [ ] **ALL** Create GitHub repo, MIT license, push initial Next.js + TS + Tailwind + shadcn scaffold
-- [ ] **ALL** Agree on branch model (e.g. `main` + short-lived feature branches, PRs auto-merge)
-- [ ] **BOT** Create Telegram bot via @BotFather, share token in private team channel
-- [ ] **BOT** Provision Supabase project; share URL + service key
-- [ ] **AI** Create Google AI Studio key for Gemini Flash + Pro
-- [ ] **BOT** Provision Vultr VM (smallest viable, Ubuntu 22.04); install Docker + Coolify
-- [ ] **ALL** Copy `.env.example` to `.env.local`; verify each owner can run `pnpm dev` locally
+| Code | Role | Person |
+|---|---|---|
+| **FE** | Frontend / UI | _____ |
+| **BE** | Backend / API | merged with BOT |
+| **AI** | AI / Agents | _____ (done) |
+| **BOT** | Telegram + Ops | _____ |
 
-**Acceptance:** repo runs locally for all four owners; secrets are in `.env.local` only.
+---
+
+## Phase 0 — Project setup *(everyone, first 30 min)* — ✅ DONE
+
+- [x] **ALL** Create GitHub repo, MIT license, Next.js + TS + Tailwind scaffold
+- [x] **ALL** Branch model agreed
+- [x] **BOT** Telegram bot created via @BotFather
+- [x] **BOT** Supabase project provisioned
+- [x] **AI** Google AI Studio key
+- [ ] **BOT** Provision Vultr VM (still pending — see `DEPLOY.md`)
+- [x] **ALL** `.env.example` copied; everyone can run `pnpm dev`
 
 ---
 
 ## Phase 1 — Visual demo first *(parallel, ~2–3h)*
 
-> Goal from `Idea.md`: dashboard works visually before AI is wired up.
-
 ### FE
 
-- [ ] Landing page `/` with hero + "Open Telegram Agent" CTA linking to `https://t.me/<bot_username>`
-- [ ] Route `/dashboard/[agentId]` shell with 3-column layout (header, left chat, center graph, right feed + matches)
+- [x] Landing page `/` with hero + CTA
+- [ ] **Route `/dashboard/[agentId]` shell with 3-column layout** ← CRITICAL
 - [ ] `AgentStatusHeader` component reading from `/api/agents/:id/status`
-- [ ] `AgentGraph` component using React Flow with custom node colors per status (see `ARCHITECTURE.md` §10)
+- [ ] `AgentGraph` component using React Flow with status-colored nodes
 - [ ] `ActivityFeed` component (scrollable, newest on top)
-- [ ] `MatchCards` component with Approve / Reject buttons (no-op for now)
-- [ ] Tailwind dark theme polish; ensure no layout shift on mobile
+- [ ] `MatchCards` component with Approve / Reject buttons
+- [ ] Tailwind dark theme polish
 
-### BE
+### BE — ✅ shipped by BOT
 
-- [ ] Supabase project + run `supabase/schema.sql` to create all 5 tables from `ARCHITECTURE.md` §5
-- [ ] Seed `attendees` with 30–50 fake profiles from `Idea.md` §Fake Data Strategy via `scripts/seed-attendees.ts`
-- [ ] Implement read-only routes returning **seeded** data:
-  - [ ] `GET /api/agents/:id/status`
-  - [ ] `GET /api/agents/:id/graph`
-  - [ ] `GET /api/agents/:id/matches`
-- [ ] `lib/db/` typed Supabase client + query helpers
+- [x] `supabase/schema.sql` exists
+- [ ] **Schema actually applied to live Supabase** ← do this in dashboard SQL editor
+- [x] `scripts/seed-attendees.ts` written
+- [ ] **Seed actually run** (`pnpm db:seed`)
+- [x] Read routes (status / graph / matches) — see `app/api/agents/[id]/`
+- [x] `lib/db/` typed Supabase helpers (`agents.ts`, `attendees.ts`, `matches.ts`, `graph-events.ts`)
 
-### BOT
+### BOT — partial
 
-- [ ] Pin DNS / temporary domain on Vultr (Cloudflare or `nip.io`)
-- [ ] Get HTTPS working on the VM (Coolify auto-cert)
-- [ ] Deploy the current empty Next.js app to Vultr; confirm public URL renders landing page
+- [ ] **Pin DNS via `nip.io`** (`<VM_IP>.nip.io`) ← `DEPLOY.md` Step 2
+- [ ] **HTTPS via Coolify auto-cert** ← `DEPLOY.md` Steps 3–6
+- [ ] **Deploy to Vultr; confirm public URL renders landing**
 
-### AI
+### AI — ✅ DONE
 
-- [ ] Stub `lib/gemini/` with `callGemini(prompt, schema)` returning **canned JSON** for each of the 4 prompt files
-- [ ] Pre-generate one realistic example output per prompt and save under `lib/seed/examples/`
-
-**Acceptance:** opening `/dashboard/seed-agent` on the deployed URL shows a populated, animated graph and match cards driven entirely by seeded data.
+- [x] `lib/gemini/client.ts` + `lib/gemini/types.ts` shipped
+- [x] All 4 real prompts shipped (not canned)
 
 ---
 
@@ -84,112 +91,105 @@ Pick one owner per role. If you're 3 people, merge **BOT** into **BE**. If you'r
 ### FE
 
 - [ ] Polling: dashboard polls `/api/agents/:id/graph` every 1.5s
-- [ ] Edge animation toggles based on `edges[].animated` flag
-- [ ] Node color transitions are CSS-animated (not jump cuts)
-- [ ] Live activity feed appends new events smoothly (no full re-renders)
+- [ ] Edge animation toggles based on `edges[].animated`
+- [ ] Node color transitions CSS-animated
+- [ ] Activity feed appends smoothly
 
 ### BE
 
-- [ ] `lib/seed/demo-fallback.ts` — scripted sequence of `graph_events` writes that walks: scanning → contacting → negotiating → matched/rejected → scheduled
-- [ ] `POST /api/agents/:id/start` (initially) just calls `demo-fallback`
-- [ ] Add `agents.status` transitions matching the script
+- [ ] `lib/seed/demo-fallback.ts` — scripted graph_events sequence (only needed if Gemini gets rate-limited during the live demo)
+- [x] `POST /api/agents/:id/start` wired (real orchestrator, not fallback)
+- [x] `agents.status` transitions emitted via `onEvent`
 
-### BOT
+### BOT — ✅ DONE
 
-- [ ] `/demo` command on the bot that calls `POST /api/agents/seed-agent/start` and replies with the dashboard URL
-
-**Acceptance:** running `/demo` in Telegram triggers the full animated sequence on the dashboard within 30 seconds.
+- [x] `/demo` command (`startDemoNetworking` in `lib/services/agent-start-service.ts`)
 
 ---
 
-## Phase 3 — Telegram onboarding *(~2h)*
+## Phase 3 — Telegram onboarding — ✅ DONE
 
 ### BOT
 
-- [ ] `lib/telegram/bot.ts` using `grammy` (recommended) or `node-telegram-bot-api`
-- [ ] Wire `POST /api/telegram/webhook` to the bot; register webhook at startup
-- [ ] Implement onboarding state machine (`ask_name → ask_role → ask_interests → ask_goal → ask_availability → confirm`)
-- [ ] Store partial answers in `attendees` row keyed by `telegram_chat_id`
-- [ ] On completion: call `POST /api/onboarding` then `POST /api/agents/create`
-- [ ] Send "Open Mission Control: …" message with deep link
+- [x] `lib/telegram/bot.ts` using `grammy`
+- [x] `POST /api/telegram/webhook` wired
+- [x] Onboarding FSM (`lib/telegram/onboarding-fsm.ts`)
+- [x] Answers stored in DB
+- [x] On completion: onboarding service called
+- [x] "Open Mission Control" deep link sent
 
 ### BE
 
-- [ ] `POST /api/onboarding` — persist answers, return normalized profile
-- [ ] `POST /api/agents/create` — insert `agents` row, return `agentId`
-- [ ] Inline button callback handlers for `approve:<matchId>` and `reject:<matchId>` → call respective endpoints
+- [x] `POST /api/onboarding`
+- [x] `POST /api/agents/create`
+- [x] Inline button handlers (approve/reject)
 
 ### AI
 
-- [ ] Connect `extractProfile.ts` (Gemini Flash) to onboarding completion; replace canned output with real call
-- [ ] JSON-schema validation with retry-on-fail
-
-**Acceptance:** new Telegram user can complete onboarding, receive a real dashboard link, and see their own name in the header.
+- [x] `extractProfile` connected via `onboarding-service.ts`
+- [x] Zod validation + retry-on-fail in `callGemini`
 
 ---
 
-## Phase 4 — Real agent orchestration *(~2–3h)*
+## Phase 4 — Real agent orchestration — ✅ DONE
 
 ### AI
 
-- [ ] `rankMatches.ts` — Gemini Flash, ranks all attendees against the user profile
-- [ ] `simulateConversation.ts` — Gemini Pro, generates the agent-to-agent dialogue + `should_meet`
-- [ ] `summarizeMatch.ts` — Gemini Pro, generates match card copy + suggested opener
-- [ ] Tune prompts so reasons are specific (shared interests, complementary goals, one concrete meeting reason)
+- [x] `rankMatches.ts` (Flash)
+- [x] `simulateConversation.ts` (Pro)
+- [x] `summarizeMatch.ts` (Pro)
+- [x] Prompts produce specific, non-generic reasons (verified in tests)
 
 ### BE
 
-- [ ] Replace `demo-fallback` body of `POST /api/agents/:id/start` with real orchestrator
-- [ ] Orchestrator loop (see `ARCHITECTURE.md` §7):
-  - emit `scanning(start)` → call `rankMatches` → cap at top 5
-  - per candidate (parallel up to 5): emit `contacting` → `simulateConversation` → emit `negotiating` → deterministic scheduling → `summarizeMatch` → insert `matches` + `conversations` → emit `matched`/`rejected`
-- [ ] `tryWithFallback(prompt, cachedJson)` wrapper so any Gemini failure cleanly falls back to seed data
+- [x] Real orchestrator in `POST /api/agents/:id/start` via `startAgentNetworking()`
+- [x] Parallel candidate processing through `runAgentWorkflow`
+- [x] Persists matches + conversations
+- [ ] `tryWithFallback(prompt, cachedJson)` — partial: `USE_DEMO_FALLBACK` env gate exists but no scripted fallback events yet
 
 ### FE
 
-- [ ] Show one expanded conversation transcript on click of a match card (proves multi-agent reasoning to judges)
-
-**Acceptance:** a fresh Telegram user completes onboarding and within ~30s sees 3 real Gemini-generated matches in both Telegram and the dashboard.
+- [ ] Show one expanded conversation transcript on click of a match card
 
 ---
 
-## Phase 5 — Approval loop *(~1h)*
+## Phase 5 — Approval loop — ✅ DONE backend
 
 ### BE
 
-- [ ] `POST /api/matches/:id/approve` — flip status, send Telegram confirmation
-- [ ] `POST /api/matches/:id/reject` — flip status, send Telegram confirmation
+- [x] `POST /api/matches/:id/approve` → flip status + Telegram confirm
+- [x] `POST /api/matches/:id/reject` → flip status + Telegram confirm
 
 ### BOT
 
-- [ ] Bot receives callback, sends "Meeting confirmed with X at Y" message
-- [ ] Reflect approved status with a green ring on the graph node
+- [x] Telegram inline `Approve` / `Reject` callbacks wired (`handlers.ts`)
+- [ ] Reflect approved status with a green ring on the graph node (FE-side)
 
 ### FE
 
-- [ ] Match card Approve / Reject buttons hit the new endpoints and optimistically update UI
-
-**Acceptance:** approving a match in Telegram updates the dashboard within 2s and vice versa.
+- [ ] Match card Approve / Reject buttons hit the new endpoints
 
 ---
 
 ## Phase 6 — Submission *(last 60 min)*
 
-### BOT (OPS)
+### BOT / OPS
 
-- [ ] Final deploy to Vultr; confirm public URL + Telegram webhook
-- [ ] Record ≤3 min demo video: landing → bot onboarding → dashboard animation → approval → bot confirmation
-- [ ] Upload demo video to YouTube (unlisted) or Loom
-- [ ] Take cover image screenshot of the graph in full color
+- [ ] **Delete `package-lock.json` (we use pnpm, not npm)** ← do this BEFORE deploy
+- [ ] **Final deploy to Vultr** (`DEPLOY.md`)
+- [ ] **Set Telegram webhook on the public URL** (`DEPLOY.md` Step 8)
+- [ ] Record ≤3 min demo video: landing → bot onboarding → dashboard → approval
+- [ ] Upload to YouTube (unlisted) or Loom
+- [ ] Take cover image screenshot of the graph
 
 ### ALL
 
-- [ ] Write README in repo (setup, env vars, architecture link)
+- [x] README in repo
 - [ ] Fill lablab.ai submission form:
   - Title, short + long description
   - Tags: **Collaborative Systems**, Agentic Workflows, Enterprise Utility, **Gemini**, **Vultr**
   - GitHub URL, demo URL, video URL, cover image, slide deck
-- [ ] Confirm MIT license file is present
+- [x] MIT license present
 - [ ] **Submit before 4:00 PM CEST**
 
 ---
@@ -198,7 +198,7 @@ Pick one owner per role. If you're 3 people, merge **BOT** into **BE**. If you'r
 
 - [ ] Supabase Realtime channel instead of polling
 - [ ] One-line ethical disclaimer about simulated target agents in the UI
-- [ ] "Try without Telegram" web onboarding form for judges who don't want to install Telegram
+- [ ] "Try without Telegram" web onboarding form for judges
 - [ ] Enterprise framing card: "Same pattern for internal offsites / sales roundtables"
 
 ---

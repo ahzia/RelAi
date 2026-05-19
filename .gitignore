@@ -48,6 +48,10 @@ Thumbs.db
 *.log
 logs/
 
+# We use pnpm — block stray npm/yarn lockfiles
+package-lock.json
+yarn.lock
+
 # Supabase
 supabase/.branches
 supabase/.temp
