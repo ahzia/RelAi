@@ -74,7 +74,7 @@ function assert(label: string, ok: boolean): void {
   const graph = buildGraphResponse({
     agentId: AGENT_ID,
     agentStatus: "done",
-    centerLabel: "Alex Chen",
+    centerLabel: "Zia",
     events: [],
     matches: [match(TARGET_A, 92), match(TARGET_B, 88)],
     attendeesById: new Map([
@@ -87,7 +87,7 @@ function assert(label: string, ok: boolean): void {
   assert("has 2 candidate nodes", graph.nodes.filter((n) => n.role === "candidate").length === 2);
   assert(
     "center label is attendee name",
-    graph.nodes.find((n) => n.id === AGENT_ID)?.label === "Alex Chen",
+    graph.nodes.find((n) => n.id === AGENT_ID)?.label === "Zia",
   );
   assert(
     "candidate has score from match",

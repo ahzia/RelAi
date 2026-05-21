@@ -12,7 +12,7 @@ export { SEED_AGENT_ID, SEED_ATTENDEE_ID } from "@/lib/seed/constants";
 export function buildDemoUserAttendee(): AttendeeInsert {
   return {
     id: SEED_ATTENDEE_ID,
-    name: "Alex Chen",
+    name: "Zia",
     role: "Founder",
     company: "RelAI Demo User",
     bio: "Building agent-native tools for professional networking at live events.",

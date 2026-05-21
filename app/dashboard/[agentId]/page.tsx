@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AgentGraph } from "@/components/dashboard/AgentGraph";
 import { AgentStatusHeader } from "@/components/dashboard/AgentStatusHeader";
 import { MatchCards } from "@/components/matches/MatchCards";
 
@@ -37,11 +38,8 @@ export default async function DashboardPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:gap-6">
-        <div className="flex min-h-[280px] flex-1 items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 lg:min-h-[480px]">
-          <p className="max-w-xs text-center text-sm text-zinc-500">
-            Agent graph (React Flow) — next FE task. Match cards use live data
-            from Supabase after <code className="text-zinc-400">pnpm db:seed</code>.
-          </p>
+        <div className="flex min-h-[420px] flex-1 lg:min-h-[calc(100vh-8rem)]">
+          <AgentGraph agentId={agentId} />
         </div>
 
         <aside className="flex w-full shrink-0 flex-col lg:w-[400px] xl:w-[440px]">
